@@ -33,7 +33,6 @@ def create_url(req:URLRequest):
             check_data = select(Data).where(Data.url == url)
             check = session.execute(check_data).scalar_one_or_none()
 
-            print(check," +__+__+__+__+")
 
             if check is not None:
                 print("------------URL ALREADY EXISTS---------------------")
@@ -65,7 +64,7 @@ def retrieve_url(short_code:str):
     try:
         sc = short_code
         with db_config.get_db_session() as session:
-            print(sc," ===========================")
+            
             get_data = select(Data).where(Data.short_url == sc)
             data = session.execute(get_data).scalar_one_or_none()
 
@@ -123,10 +122,45 @@ def update_url(short_url:str,req:URLRequest):
         return JSONResponse(res_data,status_code=200)
     except Exception as e:
         return JSONResponse({"e":str(e)},status_code=400)
-    
 
 
+
+@app.delete("/shorten/{short_url}")
+def delete_url(short_url:str):
+    try:
+        with db_config.get_db_session() as session:
+            check_query = select(Data).where(Data.short_url==short_url)
+            check = session.execute(check_query)
+            
+            if check is None:
+                 print(" ------------------NO SUCH URL FOR UPDATE ------------------------------")
+                 return JSONResponse({"msg":"no short url"},status_code=400)
+             
+            query_del = (delete(Data).where(Data.short_url==short_url))
+            session.execute(query_del)
+            return JSONResponse("Deleted Sucessfully",status_code=200)
+    except Exception as e:
+        return JSONResponse({"e":str(e)},status_code=400)
     
+
+@app.get("/shorten/{short_url}/stats")
+def get_stats(short_url:str):
+    try:
+        with db_config.get_db_session() as session:
+            count_query = select(Data).where(Data.short_url==short_url)
+            count_data = session.execute(count_query).scalar_one_or_none()
+            
+            res_data = {
+                 "id":count_data.id,
+                "url":count_data.url,
+                "short_url":count_data.short_url,
+                "created_at":count_data.created_at.isoformat() if count_data.created_at else None,
+                "updated_at":count_data.updated_at.isoformat() if count_data.updated_at else None,
+                "accessCount":count_data.count
+            }
+            return JSONResponse(res_data,status_code=200)
+    except Exception as e:
+        return JSONResponse({"e":str(e)},status_code=400)
 
 
 if __name__ == "__main__":
